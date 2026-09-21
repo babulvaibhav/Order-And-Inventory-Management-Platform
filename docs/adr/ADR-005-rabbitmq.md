@@ -1,12 +1,8 @@
 # ADR-005: RabbitMQ behind a transactional outbox
 
-## Status
-
-Accepted
-
 ## Context
 
-The assignment requires at least one genuinely asynchronous workflow, with RabbitMQ named as the expected broker, feeding a real-time notification pipeline over SSE. The part that needed real thought wasn't which broker to use — RabbitMQ is a fine, simple choice for one exchange and one consumer — it was how to get an event from "something happened in a database transaction" to "a message sat in a queue" without either publishing something that turns out to have been rolled back, or silently losing an event because the broker happened to be unreachable at that exact moment.
+The assignment requires at least one genuinely asynchronous workflow, with RabbitMQ named as the expected broker, feeding a real-time notification pipeline over SSE. 
 
 Publishing directly to RabbitMQ from inside the same transaction that made the business change has both failure modes at once: if the transaction later rolls back, a notification has already gone out for something that never actually happened; if the broker is down, either the whole business transaction fails along with it (coupling business logic to broker availability, which the assignment brief explicitly says shouldn't happen — business consistency has to outrank notification delivery) or the event is just dropped.
 

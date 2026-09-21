@@ -1,19 +1,6 @@
 # Design Patterns
 
-This documents the design patterns deliberately introduced to give the backend a clearer story for
-scaling past its current single-instance, single-broker shape, plus the patterns already present
-in the codebase before this pass. Each entry says what problem it solves, where the code lives, and
-what it buys at scale. None of these are decorative — each one also closes a real bug found while
-auditing the codebase (events publishing before a transaction committed, publish failures being
-silently dropped, and a growing `switch` statement for every new notification type).
-
-## Newly introduced
-
 ### 1. Hexagonal architecture (Ports & Adapters) for messaging and real-time push
-
-**Problem.** The notification/event code talked directly to RabbitMQ (`RabbitTemplate`) and to a
-concrete SSE registry class. Swapping the broker or the push transport meant changing the business
-services themselves.
 
 **Where it lives.**
 - `notification/application/port/EventPublisher.java` — outbound port for "a domain event
@@ -69,9 +56,6 @@ unreachable the event was silently dropped (`System.err.println`, no retry).
 
 ### 3. Strategy for notification messages
 
-**Problem.** `NotificationConsumer` built each notification's human-readable message with a
-`switch` over the event type string. Every new event type meant editing that method.
-
 **Where it lives.**
 - `notification/application/strategy/NotificationMessageStrategy.java` — `eventType()` +
   `buildMessage(Event)`.
@@ -87,32 +71,3 @@ edit to existing, already-tested code — the Open/Closed principle applied to t
 codebase that was guaranteed to grow. It's also the lowest-risk of the three changes here: it's a
 pure refactor of message-building with no schema, transaction, or transport changes.
 
-## Already present before this pass
-
-- **Repository** — every `*/infrastructure/*Repository.java` (Spring Data JPA).
-- **DTO with a static factory** — `XyzResponse.from(entity)` across every module
-  (`OrderResponse.from`, `RoleResponse.from`, `InventoryResponse.from`, ...).
-- **Chain of Responsibility** — the Spring Security filter chain, with
-  `common/security/JwtAuthenticationFilter` as one link in it.
-- **Proxy/Decorator via AOP** — `@Transactional`, `@Cacheable`/`@CacheEvict`, `@PreAuthorize` are
-  all Spring AOP proxies wrapping plain methods.
-- **Context Object** — `common/tenant/TenantContextHolder`, a request-scoped `ThreadLocal` carrying
-  the authenticated user/organization/permissions through the call stack without threading them
-  through every method signature.
-- **Builder** — the JJWT `Jwts.builder()...` chain in `JwtUtil`, and `SseEmitter.event()...` in the
-  SSE adapter.
-
-## Where the next pattern would pay off (not implemented this pass)
-
-Left out deliberately — see `KNOWN_LIMITATIONS.md` for the underlying bugs each would help fix:
-
-- **State pattern for `Order`** — move the status-transition table and per-transition side effects
-  (cancel releases stock, complete should consume the reservation, confirm is a no-op) out of
-  `OrderService`'s `if`/`switch` blocks and into the `Order` aggregate itself, paired with adding
-  `@Version` for optimistic locking. Would directly close the "COMPLETED never consumes the
-  reservation" and "no lock on Order" findings.
-- **Specification pattern for list-endpoint filters** — replace the mutually-exclusive if/else
-  filter chains in the Order/Inventory/Audit list endpoints with composable JPA `Specification`s,
-  built so a mandatory "this organization only" specification is always ANDed in first. Would let
-  filters combine (search + status, warehouse + product) instead of one silently winning, and would
-  put tenant scoping in one reusable place instead of copy-pasted per repository method.

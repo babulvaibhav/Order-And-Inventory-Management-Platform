@@ -1,15 +1,5 @@
 # ADR-004: JWT for identity, database lookup for permissions
 
-## Status
-
-Accepted
-
-## Context
-
-Stateless JWT authentication is the conventional choice for a REST API like this one, and the assignment brief asks for it directly — access and refresh tokens, expiration, password hashing. The part that needed an actual decision, rather than just following convention, was what goes *inside* the access token. The usual pattern bakes a user's roles or permissions directly into the JWT's claims, so a single signature check tells you everything you need to authorize a request without touching the database again.
-
-That pattern has a real cost here specifically, because this system has dynamic, editable permissions: roles aren't a fixed enum, their permission sets can be changed at any time by an admin, users can be reassigned to a different role, and an organization can be suspended mid-session. If permissions live inside the token, every one of those changes is invisible to anyone already holding a token until it expires — which, at a typical access-token lifetime, could mean up to a day of a revoked permission still working, or a suspended organization's users still getting in.
-
 ## Decision
 
 Keep the JWT itself sparse: user ID, organization ID, and role ID, signed with RS256. Every request resolves that role ID's actual permission set from the database, via a lookup cached briefly per role in Redis to keep it fast. Refresh tokens are opaque strings checked against a database table, not JWTs themselves, specifically so revoking one (logout, or an organization being suspended) is an immediate database write rather than something that has to wait out a token's own expiry.

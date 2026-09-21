@@ -1,13 +1,5 @@
 # ADR-002: PostgreSQL, shared schema, tenant column
 
-## Status
-
-Accepted
-
-## Context
-
-Multi-tenancy needs a strategy, and there are a few standard ones: a separate database per tenant, a separate schema per tenant within one database, or a shared schema with a tenant-identifying column on every table. The assignment brief points explicitly at the third option, and it's also just the right call for this system's actual scale — a handful of tenants, not thousands of large enterprise customers each needing hard physical isolation for compliance reasons.
-
 ## Decision
 
 One PostgreSQL database, one schema, and an `organization_id` column on every tenant-owned table, enforced at both the query level (every lookup takes the organization ID as an explicit parameter) and, for the things that most need it, at the constraint level (unique indexes and foreign keys scoped by organization).

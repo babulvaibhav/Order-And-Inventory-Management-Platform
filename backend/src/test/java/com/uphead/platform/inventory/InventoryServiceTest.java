@@ -81,13 +81,17 @@ class InventoryServiceTest {
 
     @BeforeEach
     void setUp() {
-        Organization organization = new Organization("Test Org");
+        // Unique per test: rows from earlier tests stay in the (throwaway) container, since audit
+        // logs and notifications reference the organization and it can't simply be deleted.
+        String suffix = UUID.randomUUID().toString();
+
+        Organization organization = new Organization("Test Org " + suffix);
         organization = organizationRepository.save(organization);
         organizationId = organization.getId();
 
         Role role = roleRepository.save(new Role(organizationId, "Admin", true));
 
-        User user = new User(organizationId, "test@example.com", "password", "Test User", role.getId());
+        User user = new User(organizationId, "test-" + suffix + "@example.com", "password", "Test User", role.getId());
         user = userRepository.save(user);
         userId = user.getId();
 
@@ -111,12 +115,6 @@ class InventoryServiceTest {
     @AfterEach
     void tearDown() {
         TenantContextHolder.clear();
-        inventoryRepository.deleteAll();
-        warehouseRepository.deleteAll();
-        productRepository.deleteAll();
-        userRepository.deleteAll();
-        roleRepository.deleteAll();
-        organizationRepository.deleteAll();
     }
 
     @Test

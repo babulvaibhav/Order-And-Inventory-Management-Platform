@@ -1,8 +1,7 @@
 package com.uphead.platform.inventory;
 
+import com.uphead.platform.common.tenant.TenantContext;
 import com.uphead.platform.common.tenant.TenantContextHolder;
-import com.uphead.platform.customer.domain.Customer;
-import com.uphead.platform.customer.infrastructure.CustomerRepository;
 import com.uphead.platform.inventory.application.InventoryService;
 import com.uphead.platform.inventory.domain.Inventory;
 import com.uphead.platform.inventory.infrastructure.InventoryRepository;
@@ -71,17 +70,19 @@ class ConcurrentInventoryReservationTest {
     @Autowired
     private WarehouseRepository warehouseRepository;
 
-    @Autowired
-    private CustomerRepository customerRepository;
-
     private UUID organizationId;
     private UUID userId;
     private UUID inventoryId;
 
     @BeforeEach
     void setUp() {
+        // Unique per test: rows from earlier tests stay in the (throwaway) container, since
+        // notifications written from low-stock events reference the organization, so it can't
+        // simply be deleted afterwards.
+        String suffix = UUID.randomUUID().toString();
+
         // Create test organization
-        Organization organization = new Organization("Test Org");
+        Organization organization = new Organization("Test Org " + suffix);
         organization = organizationRepository.save(organization);
         organizationId = organization.getId();
 
@@ -89,7 +90,7 @@ class ConcurrentInventoryReservationTest {
         Role role = roleRepository.save(new Role(organizationId, "Admin", true));
 
         // Create test user
-        User user = new User(organizationId, "test@example.com", "password", "Test User", role.getId());
+        User user = new User(organizationId, "test-" + suffix + "@example.com", "password", "Test User", role.getId());
         user = userRepository.save(user);
         userId = user.getId();
 
@@ -119,13 +120,6 @@ class ConcurrentInventoryReservationTest {
     @AfterEach
     void tearDown() {
         TenantContextHolder.clear();
-        inventoryRepository.deleteAll();
-        warehouseRepository.deleteAll();
-        productRepository.deleteAll();
-        customerRepository.deleteAll();
-        userRepository.deleteAll();
-        roleRepository.deleteAll();
-        organizationRepository.deleteAll();
     }
 
     @Test
@@ -141,14 +135,22 @@ class ConcurrentInventoryReservationTest {
         AtomicInteger successfulReservations = new AtomicInteger(0);
         AtomicInteger failedReservations = new AtomicInteger(0);
 
+        // TenantContextHolder is a plain ThreadLocal, so the context set in setUp() only exists on
+        // the main thread. Each worker needs its own copy — the same thing the JWT filter does for
+        // every real request thread. Without this, organizationId is null on the workers and every
+        // reservation fails the organization_id check.
+        TenantContext tenantContext = TenantContextHolder.getContext();
+
         for (int i = 0; i < numberOfThreads; i++) {
             executorService.submit(() -> {
+                TenantContextHolder.setContext(tenantContext);
                 try {
                     inventoryService.reserveInventory(inventoryId, 1);
                     successfulReservations.incrementAndGet();
                 } catch (Exception e) {
                     failedReservations.incrementAndGet();
                 } finally {
+                    TenantContextHolder.clear();
                     latch.countDown();
                 }
             });

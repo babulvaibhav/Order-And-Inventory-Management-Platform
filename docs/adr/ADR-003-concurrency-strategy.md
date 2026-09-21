@@ -1,12 +1,8 @@
 # ADR-003: Atomic conditional updates instead of application-level locking
 
-## Status
-
-Accepted
-
 ## Context
 
-Preventing overselling under concurrent requests is called out as one of the most heavily-weighted things this project gets evaluated on, so it's worth being deliberate about the mechanism rather than picking something that looks right and hoping.
+Preventing overselling under concurrent requests
 
 The obvious-looking approach — read the current available quantity, check in application code whether it's enough, then write the new quantity — has a race condition between the read and the write. Two requests can both read the same "5 available" before either writes anything back, both conclude there's enough stock, and both proceed. This isn't a rare edge case under real concurrent load; it's the default outcome once two requests land close enough together, which is exactly the scenario the assignment's mandatory concurrency test is built to trigger (100 concurrent requests against 10 units of stock).
 
