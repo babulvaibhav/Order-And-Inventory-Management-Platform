@@ -222,12 +222,12 @@ submission. Each one is something a reader (or a future pass writing the full `A
   above) as a substitute for automated coverage of *these specific* changes.
 - **No frontend automated tests** (Vitest/React Testing Library) — unchanged from the previous
   pass, explicitly out of scope here too.
-- **The full documentation suite is still missing**: `ARCHITECTURE.md`, `API.md`, `DATABASE.md`,
-  `SECURITY.md`, `SETUP.md`, `SCALABILITY.md`, and the ADRs under `docs/adr/`. **Explicitly deferred
-  per instruction for this pass** — the intent is to fix what's necessary in code first and keep
-  `README.md`/`PROGRESS.md`/this file current as the running record, so writing the fuller doc set
-  later has an accurate, single source of truth to draw from rather than needing its own separate
-  audit.
+- **The full documentation suite has since been written** — `ARCHITECTURE.md`, `API.md`,
+  `DATABASE.md`, `SECURITY.md`, `SETUP.md`, `SCALABILITY.md`, and five ADRs under `docs/adr/` — in
+  a later pass than the one that first wrote this file. It was deliberately deferred until the
+  Critical/High bugs above were actually fixed, on the theory that documenting a system honestly is
+  easier once the system matches what you're about to write down. This entry stays here as a record
+  of that sequencing rather than being deleted outright.
 - **`docker compose up --build` has not been run** in this environment — Docker isn't available
   here (checked: `docker version` fails, no daemon). This is a real gap given this pass touched
   both Dockerfiles and `docker-compose.yml` (JWT key volume, health-gated frontend `depends_on`,
@@ -253,10 +253,12 @@ submission. Each one is something a reader (or a future pass writing the full `A
 
 ## Documentation / process
 
-- `README.md`, `backend/README.md`, `frontend/README.md`, `PROGRESS.md`, and this file are being
-  kept current as the authoritative record while the fuller documentation suite (ARCHITECTURE.md
-  etc.) remains deferred (see above). `docs/DESIGN_PATTERNS.md` covers the architecture/scaling
-  angle in the meantime.
+- The root-level docs (`README.md`, `ARCHITECTURE.md`, `API.md`, `DATABASE.md`, `SECURITY.md`,
+  `SETUP.md`, `SCALABILITY.md`, this file, and `docs/adr/`) are the current, maintained set. The
+  older working notes from earlier passes — `PROGRESS.md`, `BACKEND_IMPLEMENTATION_PLAN.md`,
+  `FRONTEND_IMPLEMENTATION_PLAN.md`, `FRONTEND_API_SYNC.md` — were moved to `archive/` once they'd
+  served their purpose; they're kept on disk for anyone who wants the blow-by-blow history, but
+  they're gitignored and not part of what actually ships.
 - Not tenant-isolation bugs, just stricter-than-necessary constraints noted previously and still
   true: `dashboard/application/DashboardService.java` and
   `user/application/UserService.getCurrentUser`/`getUsers` make unscoped `findById` calls that are
