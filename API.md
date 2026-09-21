@@ -91,7 +91,7 @@ POST /v1/inventory/reserve          (?inventoryId=&quantity=)
 POST /v1/inventory/release          (?inventoryId=&quantity=)
 ```
 
-`reserve` and `release` are the low-level primitives that order creation and cancellation call internally; they're also exposed directly for anything that needs to hold stock outside the normal order flow. Both quantities must be positive — this used to not be enforced and it was a real bug (see `KNOWN_LIMITATIONS.md`).
+`reserve` and `release` are the low-level primitives that order creation and cancellation call internally; they're also exposed directly for anything that needs to hold stock outside the normal order flow. Both quantities must be positive.
 
 Every one of these is backed by an atomic conditional `UPDATE` at the database level, not a read-then-write. If a reservation can't be satisfied you get a `409 INSUFFICIENT_INVENTORY`, not a silently-wrong result.
 

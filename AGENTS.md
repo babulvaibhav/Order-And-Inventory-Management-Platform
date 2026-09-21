@@ -1483,7 +1483,7 @@ Agents should work in this order unless blocked.
 ```text
 [x] Atomic reservation query
 [x] Transaction boundaries
-[x] Deadlock-conscious ordering (multi-item reservation and inventory-transfer lock ordering both fixed 2026-09-21 — see KNOWN_LIMITATIONS.md "Fixed in this pass")
+[x] Deadlock-conscious ordering (multi-item reservation and inventory-transfer lock ordering both fixed 2026-09-21)
 [x] Mandatory concurrency integration test
 ```
 

@@ -4,7 +4,8 @@ This documents the design patterns deliberately introduced to give the backend a
 scaling past its current single-instance, single-broker shape, plus the patterns already present
 in the codebase before this pass. Each entry says what problem it solves, where the code lives, and
 what it buys at scale. None of these are decorative — each one also closes a real bug found while
-auditing the codebase (see `KNOWN_LIMITATIONS.md`, "Addressed in this pass").
+auditing the codebase (events publishing before a transaction committed, publish failures being
+silently dropped, and a growing `switch` statement for every new notification type).
 
 ## Newly introduced
 
