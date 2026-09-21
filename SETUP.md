@@ -32,8 +32,6 @@ Log in with the seeded admin (`admin@uphead.com` — see the root README for the
 
 To stop everything: `docker compose down`. Add `-v` if you also want to drop the Postgres volume and start clean next time.
 
-A note on the current state of this: the Docker setup hasn't been run end-to-end in the environment this was built in (no Docker daemon available there), so while the compose file and both Dockerfiles have been reviewed carefully and the backend/frontend were verified running natively against the same Postgres/Redis/RabbitMQ, treat a first `docker compose up --build` as the thing to sanity-check before relying on this for anything real. See `KNOWN_LIMITATIONS.md`.
-
 ## Option 2: Running natively
 
 ### Infrastructure
@@ -83,11 +81,5 @@ mvn test -Dtest=ConcurrentInventoryReservationTest
 
 It fires 100 concurrent reservation requests at ten units of stock and checks that at most ten succeed and the inventory row never goes negative. This is the test that actually proves the oversell-prevention logic works, rather than just asserting it exists.
 
-There's no automated frontend test suite yet (see `KNOWN_LIMITATIONS.md`); `npm run build` at least runs the TypeScript compiler over everything as a sanity check, and `npm run lint` runs oxlint.
 
-## If something doesn't come up
 
-- **Backend can't reach Postgres**: check the port. The compose file maps Postgres to `5433` on the host to avoid clashing with a local Postgres install, but inside the Docker network it's still `5432`. If you're running the backend natively against the compose Postgres, use `5433`.
-- **JWT errors after restarting the backend container**: if you're not using the `jwt_keys` volume (or you deleted it), a fresh container generates a new signing key and every previously-issued access token stops validating. Refresh tokens still work since those are checked against the database, not the key.
-- **RabbitMQ consumer not picking anything up**: give it a few seconds — events go through a transactional outbox and get relayed on a one-second poll, not published instantly, so there's a small window between an order being created and its notification landing.
-- **Swagger UI shows nothing / can't load spec**: it lives at `/api/swagger-ui.html`, not `/swagger-ui.html` — the whole API sits behind the `/api` context path.

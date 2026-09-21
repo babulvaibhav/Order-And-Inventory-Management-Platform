@@ -1,10 +1,11 @@
 # Scalability
 
-This is a "how would this grow" document, not a "here's what we built for scale" document — nothing below is implemented, and most of it shouldn't be until there's an actual reason for it. Building for a million users on day one, before there's any evidence the system will ever see that load, is how you end up with a slow, over-engineered system for the thousand users you actually have. The point of writing this down is to show the path exists and where the first real bottlenecks would show up, not to build the path prematurely.
+This is a "how would this grow" document — nothing below is implemented, and most of it shouldn't be until there's an actual reason for it. The point of writing this down is to show the path exists and where the first real bottlenecks would show up, not to build the path prematurely.
 
 ## Where it stands today
 
-Comfortably fine for the scale this was built for — a handful of tenants, each with a normal-sized team, normal order volume. The backend is already stateless in the way that matters most for scaling: nothing about a request depends on which instance handled the previous one. Session state doesn't exist (JWTs are self-contained), and permission/dashboard caching lives in Redis rather than in-process. The one exception, and it's a real one, is the SSE connection registry — it currently lives in memory on whichever instance accepted the connection, which means running more than one backend instance today would silently break real-time notifications for anyone connected to a different instance than the one that received their event. That's the first thing that would need fixing before running more than one instance, not the hundredth.
+Comfortably fine for the scale this was built for — a handful of tenants, each with a normal-sized team, normal order volume. The backend is already stateless in the way that matters most for scaling: nothing about a request depends on which instance handled the previous one. Session state doesn't exist (JWTs are self-contained), and permission/dashboard caching lives in Redis rather than in-process. 
+The one exception, and it's a real one, is the SSE connection registry — it currently lives in memory on whichever instance accepted the connection, which means running more than one backend instance today would silently break real-time notifications for anyone connected to a different instance than the one that received their event. That's the first thing that would need fixing before running more than one instance, not the hundredth.
 
 ## Getting to a handful of instances
 
@@ -20,7 +21,7 @@ Dashboard summaries, product/warehouse/inventory listings — these are read far
 
 The Redis caching that's already in place (dashboard summaries, resolved permissions) does a lot of this work today without needing a replica at all, and would matter even more at higher scale — the 60-second TTL and explicit eviction-on-write pattern already used for the dashboard is the same shape that'd extend to caching product/warehouse listings if those started showing up as hot paths.
 
-## When one Postgres instance isn't enough
+## Increasing the number of postgres Instances
 
 This is further out than anything above, and worth being honest that it changes the nature of the system rather than just scaling it. If a single tenant organization somehow grew large enough that its own data no longer fit comfortably on one machine — which would be an unusual amount of data for what this system models — partitioning `orders` and `audit_logs` by time range (they're naturally append-heavy and old rows are read far less often than recent ones) would be the first move, since Postgres native partitioning handles that well without touching application code.
 
@@ -44,8 +45,5 @@ Right now, the honest answer is: not much beyond application logs and Actuator's
 
 ## Rate limiting
 
-Not implemented, documented as an intended strategy. The honest reason it's not built yet is that the right limits (per-IP? per-user? per-organization? different limits for read vs. write endpoints?) depend on real traffic patterns this system hasn't seen, and guessing at them now risks either being uselessly loose or annoyingly strict. When it's needed, the natural place to add it is at the API gateway/load-balancer layer rather than in application code, so it protects the backend before a request even reaches it.
+Not implemented, documented as an intended strategy. When it's needed, the natural place to add it is at the API gateway/load-balancer layer rather than in application code, so it protects the backend before a request even reaches it.
 
-## The actual order of operations
-
-If this genuinely needed to grow, the order that makes sense is: fix the SSE registry (it's the one piece of real statefulness), add a load balancer and run a few instances, add read replicas and lean harder on the existing caching pattern once read load is the pressure point, and only then start thinking about partitioning or sharding — by which point there'd be real production metrics to make that decision from instead of a guess. Observability and rate limiting are worth doing earlier than that list implies, honestly, since they're cheap relative to their payoff and don't require anything above them to already be in place.
