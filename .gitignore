@@ -1,0 +1,31 @@
+# --- Secrets ---
+.env
+backend/keys/
+*.pem
+*.key
+
+# --- Backend build output ---
+backend/target/
+
+# --- Frontend build output ---
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# --- Dev notes and reference material kept locally but not part of the submission ---
+archive/
+Uphead_Senior_FullStack_Assignment.pdf
+assignment_text.txt
+
+# --- Claude Code's own local session data ---
+.claude/
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log

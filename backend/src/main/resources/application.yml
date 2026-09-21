@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: order-inventory-platform
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/order_inventory}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # Schema is owned by Flyway (src/main/resources/db/migration); Hibernate only validates
+      # that the entities match what's already there.
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+    web:
+      pageable:
+        # No cap here previously meant a client could request size=100000 and force one query to
+        # load the whole table. See KNOWN_LIMITATIONS.md "Addressed in this pass".
+        max-page-size: 100
+        default-page-size: 20
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+  security:
+    jwt:
+      expiration: ${JWT_EXPIRATION:86400000} # 24 hours
+      refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days
+
+jwt:
+  keystore-path: ${JWT_KEYSTORE_PATH:./keys}
+  key-passphrase: ${JWT_KEY_PASSPHRASE:changeit}
+
+app:
+  cors:
+    # Comma-separated allowed origins, or "*" for any (not recommended past a demo). Defaults to
+    # the frontend's Vite dev server and its Docker-mapped port. Override with CORS_ALLOWED_ORIGINS
+    # for a real deployment's actual frontend origin(s).
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+logging:
+  level:
+    com.uphead.platform: DEBUG
+
+    # Previously TRACE on both of these: org.springframework.security TRACE logs full
+    # authentication objects (bcrypt hashes included), and BasicBinder TRACE logs every bound SQL
+    # parameter verbatim — including raw refresh-token strings and passwords on the way in. Neither
+    # is safe to leave on by default, in a container's stdout or anywhere else. See
+    # KNOWN_LIMITATIONS.md "Addressed in this pass". Override per-environment if needed for
+    # troubleshooting, but don't leave it on in anything that ships.
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
